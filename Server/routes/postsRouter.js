@@ -8,193 +8,203 @@ const db = pgp(connectionString); //connected DB instance
 const router = express.Router();
 
 
-// GET ALL POSTS
-router.get('/all', async (req, res) => {
-  try {
-    let allPosts = await db.any('SELECT * FROM posts');
-      res.json({
+const getAllPosts = async (request, response, next) => {
+    try {
+      let allPosts = await db.any('SELECT * FROM posts');
+      response.json({
         status: 'success',
         message: allPosts
       });
-  } catch(err) {
-    console.log(err) 
-    res.status(500)
-    res.send({
-      status: 'failed',
-      message: 'Something went wrong'
-    });
-  }
-});
-
-//GET ALL POSTS OF A SPECIFIC USER
-router.get('/:userID', async (req, res) => {
-    const id = parseInt(req.params.userID);
-
-    if (isNaN(id)) {
-        res.status(500);
-        res.json({
-          status: 'failed',
-          message: 'Invalid route'
-        });
-    } else {
-        try {
-          let userPosts = await db.any('SELECT * FROM posts WHERE poster_id = $1', [id]);
-            res.json({
-              status: 'success',
-              message: userPosts
-            });
-        } catch(err) {
-          console.log(err) 
-          res.status(500)
-          res.send({
-            status: 'failed',
-            message: 'Something went wrong'
-          });
-        }
-    }
-  });
-
-// POST A NEW POST (EXPECTS IN THE BODY body)
-router.post('/:userID/register', async (req, res) => {
-    const id = parseInt(req.params.userID);
-    const userPost = req.body.body;
-
-    if (isNaN(id)) {
-        res.status(500);
-        res.json({
-          status: 'failed',
-          message: 'Invalid route'
-        });
-    } else if (!userPost) {
-        res.status(500);
-        res.json({
-            status: 'failed',
-            message: 'Missing information or invalid form'
-        });
-    } else {
-        try {
-            let insertQuery = `INSERT INTO posts (poster_id, body) 
-            VALUES($1, $2)`
-            await db.none(insertQuery, [id, userPost])
-        } catch (err) {
-            console.log(err);
-            res.json({
-                status: 'failed',
-                message: 'Something went wrong'
-            })
-        }
-
-        try {
-            let addedPost = await db.one(`SELECT * FROM posts WHERE poster_id = $1 AND body = $2 ORDER BY id DESC LIMIT 1`, [id, body])
-            res.json({
-                status: 'success',
-                message: addedPost
-            })
-        } catch (err) {
-            console.log(err);
-            res.json({
-                status: 'failed',
-                message: 'Something went wrong'
-            })
-        }
-    }
-});
-
-// EDITING A POST, EXPECTING A BODY WITH THE POSTS BODY
-router.patch('/:userID/:postID', async (req, res) => {
-  const user_id = parseInt(req.params.userID);
-  const post_id = parseInt(req.params.postID);
-  const userPost = req.body.body;
-
-  if (isNaN(user_id) || isNaN(post_id) ) {
-    res.status(500);
-    res.json({
-      status: 'failed',
-      message: 'Invalid route'
-    });
-
-  } else if (!userPost) {
-    res.status(500);
-    res.json({
-      status: 'failed',
-      message: 'Missing information'
-    });
-
-  } else {
-    try {
-      let updateQuery = `UPDATE posts 
-      SET body = $3 
-      WHERE id = $1 AND poster_id = $2`
-      await db.none(updateQuery, [post_id, user_id, userPost])
-    } catch (err) {
-      console.log(err);
-      res.json({
+    } catch(err) {
+      console.log(err) 
+      response.status(500)
+      response.send({
         status: 'failed',
         message: 'Something went wrong'
-      })
+      });
     }
-      try {
-        let editedPost = await db.one(`SELECT * FROM posts WHERE id = $1`, [post_id])
-        res.json({
-          status: 'success',
-          message: editedPost
-        })
-      } catch (err) {
-        console.log(err);
-        res.json({
-          status: 'failed',
-          message: 'Something went wrong'
-        })
-    }
-  }
-});
-
-
-// DELETING A POST
-router.delete('/:userID/:postID', async (req, res) => {
-    const user_id = parseInt(req.params.userID);
-    const post_id = parseInt(req.params.postID);
+}
   
-    if (isNaN(user_id) || isNaN(post_id) ) {
-      res.status(500);
-      res.json({
+  
+// GET ALL POSTS
+router.get('/all', getAllPosts);
+
+
+
+const checkValidRoute = (request, response, next) => {
+    const id = parseInt(request.params.userID);
+    const postID = parseInt(request.params.postID)
+    if (isNaN(id) || (request.params.postID && isNaN(postID))) {
+      response.status(500);
+      response.json({
         status: 'failed',
         message: 'Invalid route'
       });
     } else {
-        let postToDelete;
-        try {
-            postToDelete = await db.one(`SELECT * FROM posts WHERE id = $1`, [post_id])
-        } catch (err) {
-            console.log(err);
-            res.json({
-                status: 'failed',
-                message: 'Something went wrong'
-            })
+        if (postID) {
+            request.postID = postID
         }
-        try {
-            let deleteQuery = `DELETE FROM posts WHERE id = $1 AND poster_id = $2`
-            await db.none(deleteQuery, [post_id, user_id]);
-            if (postToDelete) {
-                res.json({
-                    status: 'success',
-                    message: postToDelete
-                })
-            } else {
-                res.json({
-                    status: 'failed',
-                    message: 'Post / user does not exist'
-                })
-            }
-        } catch (err) {
-            console.log(err);
-            res.json({
-                status: 'failed',
-                message: 'Something went wrong'
-            })
-        }
+        request.userID = id;
+        next();
     }
-});
+  }
+
+  const getAllPostsByUserID = async (request, response) => {
+    try {
+        let userPosts = await db.any('SELECT * FROM posts WHERE poster_id = $1', [request.userID]);
+          response.json({
+            status: 'success',
+            message: userPosts
+          });
+      } catch(err) {
+        console.log(err) 
+        response.status(500)
+        response.send({
+          status: 'failed',
+          message: 'Something went wrong or inexistent user or user does not have any post'
+        });
+      }
+  }
+
+//GET ALL POSTS OF A SPECIFIC USER
+router.get('/:userID', checkValidRoute, getAllPostsByUserID);
+
+
+const checkValidBody = (request, response, next) => {
+    request.postBody = (request.body.body);
+  
+    if (!request.postBody) {
+      response.status(500);
+      response.json({
+        status: 'failed',
+        message: 'Missing information'
+      });
+    } else {
+      next();
+    }
+  }
+
+const getUserByID = async (request, response, next) => {
+    try {
+      const targetUser = await db.one('SELECT * FROM users WHERE id = $1', [request.userID]);
+      if (targetUser.id) {
+        request.targetUser = targetUser;
+        next();
+      } 
+    } catch (err) {
+      console.log(err);
+      response.json({
+        status: 'failed',
+        message: 'Something went wrong or inexistent user'
+      });
+    }
+}
+
+const addPost = async (request, response, next) => {
+    try {
+        let insertQuery = `INSERT INTO posts (poster_id, body) 
+        VALUES($1, $2)`
+        await db.none(insertQuery, [request.targetUser.id, request.postBody]);
+        next();
+    } catch (err) {
+        console.log(err);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        })
+    }
+}
+
+
+const getTheAddedPost = async (request, response) => {
+    try {
+        let addedPost = await db.one(`SELECT * FROM posts WHERE poster_id = $1 AND body = $2 ORDER BY id DESC LIMIT 1`, [request.targetUser.id, request.postBody])
+        response.json({
+            status: 'success',
+            message: addedPost
+        })
+    } catch (err) {
+        console.log(err);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        })
+    }
+}
+
+// POST A NEW POST (EXPECTS IN THE BODY body)
+router.post('/:userID/register', checkValidRoute, checkValidBody, getUserByID, addPost, getTheAddedPost);
+
+const checkExistingPost = async (request, response, next) => {
+    try {
+        let targetPost = await db.one('SELECT * FROM posts WHERE poster_id = $1 AND id = $2', [request.targetUser.id, request.postID])
+        request.targetPost = targetPost;
+        next();
+    } catch (err) {
+        console.log(err);
+        response.status(500);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        });
+    }
+}
+
+const updatePost = async (request,response, next) => {
+    try {
+        let updateQuery = `UPDATE posts 
+        SET body = $3 
+        WHERE id = $1 AND poster_id = $2`
+        await db.none(updateQuery, [request.targetPost.id, request.targetUser.id, request.postBody]);
+        next();
+    } catch (err) {
+        console.log(err);
+        response.status(500);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        });
+    }
+}
+
+const getUpdatedPost = async (request, response) => {
+    try {
+        let updatedPost = await db.one(`SELECT * FROM posts WHERE poster_id = $1 AND id = $2`, [request.targetUser.id, request.targetPost.id])
+        response.json({
+            status: 'success',
+            message: updatedPost
+        })
+    } catch (err) {
+        console.log(err);
+        response.status(500);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        });
+    }
+}
+// EDITING A POST, EXPECTING A BODY WITH THE POSTS BODY
+router.patch('/:userID/:postID', checkValidRoute, checkValidBody, getUserByID, checkExistingPost, updatePost, getUpdatedPost)
+
+const deletePost = async (request, response) => {
+    try {
+        let deleteQuery = `DELETE FROM posts WHERE id = $1 AND poster_id = $2`
+        await db.none(deleteQuery, [request.targetPost.id, request.targetUser.id]);
+        response.json({
+            status: 'success',
+            message: request.targetPost
+        })
+    } catch (err) {
+        console.log(err);
+        response.json({
+            status: 'failed',
+            message: 'Something went wrong'
+        })
+    }
+}
+
+// DELETING A POST
+router.delete('/:userID/:postID', checkValidRoute, getUserByID, checkExistingPost, deletePost)
 
 
 module.exports = router;
