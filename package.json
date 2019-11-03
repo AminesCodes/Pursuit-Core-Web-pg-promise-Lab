@@ -1,0 +1,26 @@
+{
+  "name": "Pursuit-Core-Web-pg-promise-Lab",
+  "version": "1.0.0",
+  "description": "Continuing the starter project [here](https://github.com/joinpursuit/Pursuit-Core-Web-pg-promise-Intro/tree/master), add the following features:",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AminesCodes/Pursuit-Core-Web-pg-promise-Lab.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AminesCodes/Pursuit-Core-Web-pg-promise-Lab/issues"
+  },
+  "homepage": "https://github.com/AminesCodes/Pursuit-Core-Web-pg-promise-Lab#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "nodemon": "^1.19.4",
+    "pg-promise": "^9.3.3"
+  }
+}
