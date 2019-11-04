@@ -31,10 +31,13 @@ const returnAllUsers = (request, response) => {
 
 router.get('/all', getAllUsers, returnAllUsers);
 
+const formateName = (str) => {
+  return (str[0].toUpperCase()+(str.slice(1, str.length)).toLowerCase());
+}
 
 const checkValidBody = (request, response, next) => {
-  request.firstName = (request.body.firstname).toLowerCase();
-  request.lastName = (request.body.lastname).toLowerCase();
+  request.firstName = formateName(request.body.firstname);
+  request.lastName = formateName(request.body.lastname);
   request.age = parseInt(request.body.age);
 
   if (!request.firstName || !request.lastName || !request.age || isNaN(parseInt(request.age))) {
@@ -55,7 +58,9 @@ const checkExistentUser = (request, response, next) => {
     if (user.firstname === request.firstName 
         && user.lastname === request.lastName 
         && user.age === request.age) {
-      userExists = true;
+          userExists = true;
+          request.userToLog = user;
+          break;
     }
   }
   request.userExists = userExists;
@@ -64,7 +69,7 @@ const checkExistentUser = (request, response, next) => {
 
 const addUser = async (request, response, next) => {
   if (request.userExists) {
-    response.status(500);
+    response.status(203);
     response.json({
       status: 'failed',
       message: 'User exists already'
@@ -102,7 +107,25 @@ const getConcernedUser = async (request, response) => {
 }
 
 
-router.post('/register', checkValidBody, getAllUsers, checkExistentUser, addUser, getConcernedUser)
+router.post('/register', checkValidBody, getAllUsers, checkExistentUser, addUser, getConcernedUser);
+
+const userToLog = (request, response) => {
+  if (request.userExists) {
+    response.json({
+      status: 'success',
+      message: request.userToLog
+    })
+  } else {
+    response.json({
+      status: 'failed',
+      message: 'User does not exist'
+    })
+  }
+}
+
+// NOT A REAL PATCH, JUST TO HAVE A ABILITY TO ACCEPT A BODY
+// LOGIN A USER
+router.patch('/login', checkValidBody, getAllUsers, checkExistentUser, userToLog);
 
 
 const checkValidRoute = (request, response, next) => {
