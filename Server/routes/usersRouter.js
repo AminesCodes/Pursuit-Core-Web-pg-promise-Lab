@@ -9,7 +9,7 @@ const router = express.Router();
 
 const getAllUsers = async (request, response, next) => {
   try {
-    let allUsers = await db.any('SELECT * FROM users');
+    let allUsers = await db.any('SELECT * FROM users ORDER BY id DESC');
     request.allUsers = allUsers;
     next();
   } catch(err) {
